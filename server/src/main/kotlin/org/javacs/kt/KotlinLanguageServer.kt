@@ -51,7 +51,7 @@ class KotlinLanguageServer(
     }
 
     init {
-        LOG.info("Kotlin Language Server: Version ${VERSION ?: "?"}")
+        LOG.info("Kotlin Language Server: Version ${VERSION ?: "?"} (PAGE patch: KtClassOrObject reference)")
     }
 
     override fun connect(client: LanguageClient) {

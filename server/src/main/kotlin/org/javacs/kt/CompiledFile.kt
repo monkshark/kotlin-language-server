@@ -141,9 +141,10 @@ class CompiledFile(
         if (asReference) {
             // Convert the declaration into a fake reference expression
             when {
-                parent is KtClass && psi.node.elementType == KtTokens.IDENTIFIER -> {
-                    // Converting class name identifier: Use a fake property with the class name as type
-                    //                                   Otherwise the compiler/analyzer would throw an exception due to a missing TopLevelDescriptorProvider
+                parent is KtClassOrObject && psi.node.elementType == KtTokens.IDENTIFIER -> {
+                    // Converting class/object name identifier: Use a fake property with the class/object name as type
+                    //                                          Otherwise the compiler/analyzer would throw an exception due to a missing TopLevelDescriptorProvider
+                    //                                          (PAGE patch: also covers KtObjectDeclaration, not just KtClass)
                     val prefix = "val x: "
                     surroundingContent = prefix + psi.text
                     offset = psi.textRange.startOffset - prefix.length
