@@ -10,7 +10,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
-internal class GradleClassPathResolver(private val path: Path, private val includeKotlinDSL: Boolean): ClassPathResolver {
+internal class GradleClassPathResolver(
+    private val path: Path,
+    private val includeKotlinDSL: Boolean,
+    private val versionFiles: List<Path> = listOf(path),
+): ClassPathResolver {
     override val resolverType: String = "Gradle"
     private val projectDirectory: Path get() = path.parent
 
@@ -34,7 +38,7 @@ internal class GradleClassPathResolver(private val path: Path, private val inclu
         }
     }
 
-    override val currentBuildFileVersion: Long get() = path.toFile().lastModified()
+    override val currentBuildFileVersion: Long get() = versionFiles.maxOf { it.toFile().lastModified() }
 
     companion object {
         /** Create a Gradle resolver if a file is a pom. */
