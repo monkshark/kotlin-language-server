@@ -54,6 +54,8 @@ internal class MavenClassPathResolver private constructor(private val pom: Path)
         }.toSet()
     }
 
+    override val providesSources: Boolean get() = true
+
     override val currentBuildFileVersion: Long get() = pom.toFile().lastModified()
 
     companion object {

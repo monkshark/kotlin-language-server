@@ -144,6 +144,8 @@ internal class CachedClassPathResolver(
         return newClasspath
     }
 
+    override val providesSources: Boolean get() = wrapped.providesSources
+
     override val currentBuildFileVersion: Long get() = wrapped.currentBuildFileVersion
 
     private fun updateClasspathCache(newClasspathEntries: Set<ClassPathEntry>, includesSources: Boolean) {

@@ -64,10 +64,12 @@ class CompilerClassPath(
                 refreshCompiler = true
             }
 
-            async.compute {
-                val newClassPathWithSources = resolver.classpathWithSources
-                synchronized(classPath) {
-                    syncPaths(classPath, newClassPathWithSources, "class path with sources") { it.compiledJar }
+            if (resolver.providesSources) {
+                async.compute {
+                    val newClassPathWithSources = resolver.classpathWithSources
+                    synchronized(classPath) {
+                        syncPaths(classPath, newClassPathWithSources, "class path with sources") { it.compiledJar }
+                    }
                 }
             }
         }

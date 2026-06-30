@@ -30,6 +30,13 @@ interface ClassPathResolver {
     val classpathWithSources: Set<ClassPathEntry> get() = classpath
 
     /**
+     * Whether [classpathWithSources] can resolve source JARs beyond what [classpath] already returns.
+     * Defaults to false so resolvers that only return compiled JARs (e.g. Gradle) are not asked to
+     * re-resolve their classpath a second time just to discover sources they never provide.
+     */
+    val providesSources: Boolean get() = false
+
+    /**
      * This should return the current build file version.
      * It usually translates to the file's lastModified time.
      * Resolvers that don't have a build file use the default (i.e., 1).
@@ -66,6 +73,7 @@ internal class UnionClassPathResolver(val lhs: ClassPathResolver, val rhs: Class
     override val buildScriptClasspath get() = lhs.buildScriptClasspath + rhs.buildScriptClasspath
     override val buildScriptClasspathOrEmpty get() = lhs.buildScriptClasspathOrEmpty + rhs.buildScriptClasspathOrEmpty
     override val classpathWithSources get() = lhs.classpathWithSources + rhs.classpathWithSources
+    override val providesSources get() = lhs.providesSources || rhs.providesSources
     override val currentBuildFileVersion: Long get() = max(lhs.currentBuildFileVersion, rhs.currentBuildFileVersion)
 }
 
@@ -78,5 +86,6 @@ internal class FirstNonEmptyClassPathResolver(val lhs: ClassPathResolver, val rh
     override val classpathWithSources get() = lhs.classpathWithSources.takeIf {
         it.isNotEmpty()
     } ?: rhs.classpathWithSources
+    override val providesSources get() = lhs.providesSources || rhs.providesSources
     override val currentBuildFileVersion: Long get() = max(lhs.currentBuildFileVersion, rhs.currentBuildFileVersion)
 }
