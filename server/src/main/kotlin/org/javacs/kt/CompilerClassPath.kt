@@ -52,7 +52,11 @@ class CompilerClassPath(
         updateJavaSourcePath: Boolean = true
     ): Boolean {
         // TODO: Fetch class path and build script class path concurrently (and asynchronously)
-        val resolver = defaultClassPathResolver(workspaceRoots, databaseService.db)
+        val resolver = defaultClassPathResolver(
+            workspaceRoots,
+            databaseService.db,
+            buildScriptsEnabled = scriptsConfig.buildScriptsEnabled,
+        )
         var refreshCompiler = updateJavaSourcePath
 
         if (updateClassPath) {

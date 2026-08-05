@@ -75,20 +75,27 @@ data class FormattingConfiguration(
     var ktfmt: KtfmtConfiguration = KtfmtConfiguration()
 )
 
-fun getStoragePath(params: InitializeParams): Path? {
-    params.initializationOptions?.let { initializationOptions ->
-        val gson = GsonBuilder().registerTypeHierarchyAdapter(Path::class.java, GsonPathConverter()).create()
-        val options = gson.fromJson(initializationOptions as JsonElement, InitializationOptions::class.java)
+fun getStoragePath(params: InitializeParams): Path? = initializationOptions(params)?.storagePath
 
-        return options?.storagePath
-    }
+/**
+ * Whether the client wants the Gradle Kotlin DSL build script classpath resolved. Resolving it costs
+ * an extra Gradle CLI invocation per workspace, so clients that do not offer completion inside build
+ * scripts can opt out before the first classpath refresh runs.
+ */
+fun getBuildScriptsEnabled(params: InitializeParams): Boolean? =
+    initializationOptions(params)?.buildScriptsEnabled
 
-    return null
+private fun initializationOptions(params: InitializeParams): InitializationOptions? {
+    val initializationOptions = params.initializationOptions ?: return null
+    val gson = GsonBuilder().registerTypeHierarchyAdapter(Path::class.java, GsonPathConverter()).create()
+    return gson.fromJson(initializationOptions as JsonElement, InitializationOptions::class.java)
 }
 
 data class InitializationOptions(
     // A path to a directory used by the language server to store data. Used for caching purposes.
-    val storagePath: Path?
+    val storagePath: Path?,
+    // Whether to resolve the Gradle Kotlin DSL build script classpath. Defaults to enabled.
+    val buildScriptsEnabled: Boolean? = null
 )
 
 class GsonPathConverter : JsonDeserializer<Path?> {

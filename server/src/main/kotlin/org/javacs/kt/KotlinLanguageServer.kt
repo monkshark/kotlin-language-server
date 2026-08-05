@@ -97,6 +97,8 @@ class KotlinLanguageServer(
         val storagePath = getStoragePath(params)
         databaseService.setup(storagePath)
 
+        getBuildScriptsEnabled(params)?.let { config.scripts.buildScriptsEnabled = it }
+
         val clientCapabilities = params.capabilities
         config.completion.snippets.enabled = clientCapabilities?.textDocument?.completion?.completionItem?.snippetSupport ?: false
 
