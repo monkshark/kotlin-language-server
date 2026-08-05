@@ -6,35 +6,43 @@ import java.nio.file.Path
 import java.nio.file.PathMatcher
 import java.nio.file.FileSystems
 
-fun defaultClassPathResolver(workspaceRoots: Collection<Path>, db: Database? = null): ClassPathResolver {
+fun defaultClassPathResolver(
+    workspaceRoots: Collection<Path>,
+    db: Database? = null,
+    buildScriptsEnabled: Boolean = true,
+): ClassPathResolver {
     val childResolver = WithStdlibResolver(
         ShellClassPathResolver.global(workspaceRoots.firstOrNull())
-            .or(workspaceRoots.asSequence().flatMap { workspaceResolvers(it) }.joined)
+            .or(workspaceRoots.asSequence().flatMap { workspaceResolvers(it, buildScriptsEnabled) }.joined)
     ).or(BackupClassPathResolver)
 
     return db?.let { CachedClassPathResolver(childResolver, it) } ?: childResolver
 }
 
 /** Searches the workspace for all files that could provide classpath info. */
-private fun workspaceResolvers(workspaceRoot: Path): Sequence<ClassPathResolver> {
+private fun workspaceResolvers(workspaceRoot: Path, buildScriptsEnabled: Boolean): Sequence<ClassPathResolver> {
     val ignored: List<PathMatcher> = ignoredPathPatterns(workspaceRoot, workspaceRoot.resolve(".gitignore"))
-    return folderResolvers(workspaceRoot, ignored).asSequence()
+    return folderResolvers(workspaceRoot, ignored, buildScriptsEnabled).asSequence()
 }
 
 /** Searches the folder for all build-files. */
-private fun folderResolvers(root: Path, ignored: List<PathMatcher>): Collection<ClassPathResolver> {
+private fun folderResolvers(
+    root: Path,
+    ignored: List<PathMatcher>,
+    buildScriptsEnabled: Boolean,
+): Collection<ClassPathResolver> {
     val paths = root.toFile()
         .walk()
         .onEnter { file -> ignored.none { it.matches(file.toPath()) } }
         .map { it.toPath() }
         .toList()
 
-    val rootGradle = rootGradleResolver(root, paths)
+    val rootGradle = rootGradleResolver(root, paths, buildScriptsEnabled)
     val resolvers = mutableListOf<ClassPathResolver>()
     rootGradle?.let { resolvers.add(it) }
     for (path in paths) {
         if (rootGradle != null && isGradleBuildFile(path)) continue
-        asClassPathProvider(path)?.let { resolvers.add(it) }
+        asClassPathProvider(path, buildScriptsEnabled)?.let { resolvers.add(it) }
     }
     return resolvers
 }
@@ -46,7 +54,7 @@ private fun folderResolvers(root: Path, ignored: List<PathMatcher>): Collection<
  * a settings file sits at the workspace root and no nested settings file defines an independent
  * build, so multi-build workspaces keep their per-module resolvers.
  */
-private fun rootGradleResolver(root: Path, paths: List<Path>): ClassPathResolver? {
+private fun rootGradleResolver(root: Path, paths: List<Path>, buildScriptsEnabled: Boolean): ClassPathResolver? {
     val rootBuildFile = paths.firstOrNull { it.parent == root && isGradleBuildFile(it) } ?: return null
     val settingsFiles = paths.filter { isGradleSettingsFile(it) }
     val rootHasSettings = settingsFiles.any { it.parent == root }
@@ -55,7 +63,7 @@ private fun rootGradleResolver(root: Path, paths: List<Path>): ClassPathResolver
 
     return GradleClassPathResolver(
         rootBuildFile,
-        includeKotlinDSL = rootBuildFile.toString().endsWith(".kts"),
+        includeKotlinDSL = buildScriptsEnabled && rootBuildFile.toString().endsWith(".kts"),
         versionFiles = paths.filter { isGradleBuildFile(it) },
     )
 }
@@ -88,7 +96,7 @@ private fun ignoredPathPatterns(root: Path, gitignore: Path): List<PathMatcher> 
         ?: emptyList()
 
 /** Tries to create a classpath resolver from a file using as many sources as possible */
-private fun asClassPathProvider(path: Path): ClassPathResolver? =
+private fun asClassPathProvider(path: Path, buildScriptsEnabled: Boolean): ClassPathResolver? =
     MavenClassPathResolver.maybeCreate(path)
-        ?: GradleClassPathResolver.maybeCreate(path)
+        ?: GradleClassPathResolver.maybeCreate(path, buildScriptsEnabled)
         ?: ShellClassPathResolver.maybeCreate(path)

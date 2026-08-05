@@ -42,9 +42,14 @@ internal class GradleClassPathResolver(
 
     companion object {
         /** Create a Gradle resolver if a file is a pom. */
-        fun maybeCreate(file: Path): GradleClassPathResolver? =
+        fun maybeCreate(file: Path, buildScriptsEnabled: Boolean = true): GradleClassPathResolver? =
             file.takeIf { file.endsWith("build.gradle") || file.endsWith("build.gradle.kts") }
-                ?.let { GradleClassPathResolver(it, includeKotlinDSL = file.toString().endsWith(".kts")) }
+                ?.let {
+                    GradleClassPathResolver(
+                        it,
+                        includeKotlinDSL = buildScriptsEnabled && file.toString().endsWith(".kts"),
+                    )
+                }
     }
 }
 
